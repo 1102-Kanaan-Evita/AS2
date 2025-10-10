@@ -264,6 +264,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39615cfd56544d943888ab59f0ccc720, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GridMaker
+  onlyDisplayPathGizmos: 1
   unwalkable:
     serializedVersion: 2
     m_Bits: 1024

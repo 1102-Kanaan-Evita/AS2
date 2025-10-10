@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 public class GridMaker : MonoBehaviour
 {
+    public bool onlyDisplayPathGizmos;
     public LayerMask unwalkable;
     public Vector2 gridWorldSize;
     public float nodeRadius;
@@ -17,6 +18,14 @@ public class GridMaker : MonoBehaviour
         gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter); // gives how many nodes we can fit in world size.
         gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
         CreateGrid();
+    }
+
+    public int MaxSize
+    {
+        get
+        {
+            return gridSizeX * gridSizeY;
+        }
     }
 
     void CreateGrid()
@@ -75,21 +84,34 @@ public class GridMaker : MonoBehaviour
     public List<Node> path;
     private void OnDrawGizmos() //helps to visualize
     {
-        Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y)); 
-
-        if (grid!= null)
+        Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
+        if (onlyDisplayPathGizmos)
         {
-            foreach (Node n in grid)
+            if (path != null)
             {
-                Gizmos.color = (n.walkable) ? Color.white : Color.red; //If true, set to white, else set to red gizmo color.
-                if (path != null)
+                foreach (Node n in path)
                 {
-                    if (path.Contains(n))
-                    {
-                        Gizmos.color = Color.black;
-                    }
+                    Gizmos.color = Color.black;
+                    Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
                 }
-                Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
+            }
+        }
+        else
+        {
+            if (grid != null)
+            {
+                foreach (Node n in grid)
+                {
+                    Gizmos.color = (n.walkable) ? Color.white : Color.red; //If true, set to white, else set to red gizmo color.
+                    if (path != null)
+                    {
+                        if (path.Contains(n))
+                        {
+                            Gizmos.color = Color.black;
+                        }
+                    }
+                    Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
+                }
             }
         }
     }
