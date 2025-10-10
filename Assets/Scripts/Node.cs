@@ -50,5 +50,16 @@ public class Node : IHeapItem<Node>
         }
         return -compare;
     }
+
+        public Node Clone()
+    {
+        return new Node(walkable, worldPosition, gridX, gridY)
+        {
+            gCost = int.MaxValue,
+            hCost = 0,
+            parent = null
+        };
+    }
+
     
 }
