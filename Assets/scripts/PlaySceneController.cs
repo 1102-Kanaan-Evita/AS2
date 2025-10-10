@@ -17,49 +17,47 @@ public class PlaySceneController : MonoBehaviour
     void Start()
     {
         activePreset = GameState.SelectedPreset;
-        if (hudPresetLabel != null) hudPresetLabel.text = activePreset.ToString();
+        if (hudPresetLabel != null)
+            hudPresetLabel.text = activePreset.ToString();
 
-        // make sure envGen exists
+        // Generate environment
         if (envGen != null)
-        {
-            envGen.preset = (EnvironmentGenerator.Preset)System.Enum.Parse(typeof(EnvironmentGenerator.Preset), activePreset.ToString());
-            envGen.GeneratePreset(); // generate on scene load
-        }
+            envGen.GenerateEnvironment(activePreset);
 
-        // spawn player
+        // Spawn player
         if (playerPrefab != null && spawnPoint != null)
-        {
             Instantiate(playerPrefab, spawnPoint.position, spawnPoint.rotation);
-        }
 
+        // Hook up button
         if (completeButton != null)
             completeButton.onClick.AddListener(OnManualComplete);
 
-        // music
-        if (AudioManager.I != null && playMusic != null) AudioManager.I.PlayMusic(playMusic);
+        // Play music if available
+        if (AudioManager.I != null && playMusic != null)
+            AudioManager.I.PlayMusic(playMusic);
     }
 
     void Update()
     {
-        // regenerate on C
+        // Regenerate environment when pressing "C"
         if (Input.GetKeyDown(KeyCode.C) && envGen != null)
         {
-            envGen.GeneratePreset();
+            envGen.ClearEnvironment();
+            envGen.GenerateEnvironment(activePreset);
         }
     }
 
-    // called when player decides they've "completed" the challenge (or after auto detect)
+    // Called when the player finishes an environment
     public void OnManualComplete()
     {
         GameState.MarkCompleted(activePreset);
-        // notify menu manager when they return (menu reads GameState)
-        SceneManager.LoadScene("MainMenu");
+        SceneManager.LoadScene("MenuScene");
     }
 
-    // helper for auto-complete if you want (not used by default)
+    // Optional: Auto completion
     public void OnAutoCompleteDetected()
     {
         GameState.MarkCompleted(activePreset);
-        SceneManager.LoadScene("MainMenu");
+        SceneManager.LoadScene("MenuScene");
     }
 }

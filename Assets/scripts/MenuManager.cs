@@ -1,4 +1,3 @@
-// Assets/Scripts/MenuManager.cs
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,17 +6,21 @@ using UnityEngine.SceneManagement;
 public class MenuManager : MonoBehaviour
 {
     [Header("UI / Prefabs")]
-    public Transform boardParent;           // panel that contains the buttons (GridLayoutGroup)
-    public GameObject jeopardyButtonPrefab; // prefab with Button + JeopardyButton script
-    public Text titleText;
+    public Transform boardParent;
+    public GameObject jeopardyButtonPrefab;
+    public Toggle showLabelsToggle;
     public AudioClip jeopardyMusic;
     public AudioClip deathSfx;
     public AudioClip winSfx;
-    public int lives = 3;
 
     private AudioSource _audio;
+    private List<JeopardyButton> _buttons = new List<JeopardyButton>();
 
-    // define the order/labels of the board
+    private static bool boardShuffled = false;
+
+    private bool showAllLabels = false;
+
+    // Environment list (8 buttons)
     public List<GameState.Preset> presetsOrder = new List<GameState.Preset> {
         GameState.Preset.RandomCircles20,
         GameState.Preset.RandomCircles30,
@@ -26,39 +29,101 @@ public class MenuManager : MonoBehaviour
         GameState.Preset.RandomRects30,
         GameState.Preset.RandomRects100,
         GameState.Preset.AStarShowcase,
-        GameState.Preset.Office,
-        GameState.Preset.Difficult
+        GameState.Preset.Office
     };
-
-    // optional: indices on the board to mark as death buttons (players don't know)
-    public List<int> deathButtonIndices = new List<int> { 2, 7 }; // example: 3rd and 8th buttons are deadly
-
-    private List<JeopardyButton> _buttons = new List<JeopardyButton>();
 
     void Start()
     {
         _audio = gameObject.AddComponent<AudioSource>();
         _audio.loop = true;
-        if (jeopardyMusic != null) { _audio.clip = jeopardyMusic; _audio.Play(); }
+        if (jeopardyMusic != null)
+        {
+            _audio.clip = jeopardyMusic;
+            _audio.Play();
+        }
 
-        PopulateBoard();
+        if (!boardShuffled)
+        {
+            PopulateBoard();      
+            ShuffleButtons();     
+            boardShuffled = true;
+        }
+        else
+        {
+            //If board already exists, just repopulate without reshuffle
+            PopulateBoard();
+        }
+
+        AssignMoneyValues();
+
+        if (showLabelsToggle != null)
+        {
+            showLabelsToggle.onValueChanged.RemoveAllListeners();
+            showLabelsToggle.onValueChanged.AddListener(OnShowLabelsChanged);
+            showAllLabels = showLabelsToggle.isOn;
+        }
+
         RefreshButtons();
     }
 
+
     void PopulateBoard()
     {
-        // clear existing (editor-friendly)
-        foreach (Transform t in boardParent) Destroy(t.gameObject);
+        Debug.Log("PopulateBoard() called");
+
+        // Clear existing buttons
+        foreach (Transform t in boardParent)
+            Destroy(t.gameObject);
         _buttons.Clear();
 
+        // Create 8 environment buttons
         for (int i = 0; i < presetsOrder.Count; i++)
         {
-            var preset = presetsOrder[i];
             GameObject go = Instantiate(jeopardyButtonPrefab, boardParent);
             var jb = go.GetComponent<JeopardyButton>();
-            bool isDeath = deathButtonIndices.Contains(i);
-            jb.Initialize(this, preset, preset.ToString(), isDeath);
+            jb.Initialize(this, presetsOrder[i], presetsOrder[i].ToString(), false);
             _buttons.Add(jb);
+        }
+
+        // Create 1 death button
+        GameObject deathGo = Instantiate(jeopardyButtonPrefab, boardParent);
+        var deathJb = deathGo.GetComponent<JeopardyButton>();
+        // Use the first preset as placeholder; label and isDeath flag control behavior
+        deathJb.Initialize(this, presetsOrder[0], "DEATH", true);
+        deathJb.isDeath = true;
+        _buttons.Add(deathJb);
+
+        // Shuffle all 9 buttons once
+        //ShuffleButtons();
+
+        // Assign money values by row
+        AssignMoneyValues();
+    }
+
+
+    void ShuffleButtons()
+    {
+        for (int i = 0; i < _buttons.Count; i++)
+            _buttons[i].transform.SetSiblingIndex(Random.Range(0, _buttons.Count));
+    }
+
+    void AssignMoneyValues()
+    {
+        for (int i = 0; i < boardParent.childCount; i++)
+        {
+            var child = boardParent.GetChild(i);
+            var jb = child.GetComponent<JeopardyButton>();
+
+            if (jb == null)
+            {
+                Debug.LogWarning($"Child {child.name} has no JeopardyButton component!");
+                continue;
+            }
+
+            int row = i / 3;
+            string value = row == 0 ? "$100" : row == 1 ? "$200" : "$300";
+            jb.moneyLabel = value;
+            jb.UpdateDisplay(showAllLabels);
         }
     }
 
@@ -66,46 +131,49 @@ public class MenuManager : MonoBehaviour
     {
         if (sourceButton.isDeath)
         {
-            // death behavior: lose life, play SFX, disable the button
-            lives--;
             if (deathSfx != null) _audio.PlayOneShot(deathSfx);
+
             sourceButton.SetDead();
-            if (lives <= 0)
-            {
-                // fully "game over" - show a quick modal; here we just reset completions and lives
-                GameState.ResetAll();
-                lives = 3;
-                RefreshButtons();
-            }
+            GameState.ResetAll();
+
+            // Reshuffle and reassign money values after death
+            ShuffleButtons();
+            AssignMoneyValues();
+
+            RefreshButtons();
+
             return;
         }
+
 
         GameState.SelectedPreset = preset;
         SceneManager.LoadScene("PlayScene");
     }
 
-    public void NotifyLevelComplete(GameState.Preset preset)
-    {
-        GameState.MarkCompleted(preset);
-        if (winSfx != null) _audio.PlayOneShot(winSfx);
-        RefreshButtons();
-    }
-
     void RefreshButtons()
     {
-        for (int i = 0; i < _buttons.Count; i++)
+        foreach (var jb in _buttons)
         {
-            var b = _buttons[i];
-            if (GameState.IsCompleted(b.preset)) b.SetCompleted();
-            else b.SetNormal();
+            if (jb.isDeath)
+            {
+                jb.SetNormal(); // keep its visual consistent
+                jb.UpdateDisplay(showAllLabels);
+                continue;
+            }
+
+            if (GameState.IsCompleted(jb.preset))
+                jb.SetCompleted();
+            else
+                jb.SetNormal();
+
+            jb.UpdateDisplay(showAllLabels);
         }
     }
 
-    // call from a UI Reset button if you want to unhide everything
-    public void ResetAll()
+    public void OnShowLabelsChanged(bool show)
     {
-        GameState.ResetAll();
-        lives = 3;
-        RefreshButtons();
+        showAllLabels = show;
+        foreach (var jb in _buttons)
+            jb.UpdateDisplay(showAllLabels);
     }
 }

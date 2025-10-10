@@ -12,8 +12,7 @@ public static class GameState
         RandomRects30,
         RandomRects100,
         AStarShowcase,
-        Office,
-        Difficult
+        Office
     }
 
     // selected preset for the next PlayScene
