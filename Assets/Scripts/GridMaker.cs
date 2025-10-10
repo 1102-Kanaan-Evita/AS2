@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class GridMaker : MonoBehaviour
 {
@@ -28,9 +29,32 @@ public class GridMaker : MonoBehaviour
             {
                 Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius); //finds points nodes will occupy.
                 bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkable)); //checksphere returns true if collision detected. Passing unwalkable mask to the function at the end there.
-                grid[x, y] = new Node(walkable, worldPoint); //populates array
+                grid[x, y] = new Node(walkable, worldPoint, x, y); //populates array
             }
         }
+    }
+
+    public List<Node> GetNeighbors(Node node)
+    {
+        List<Node> neighbors = new List<Node>();
+
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                if (x == 0 && y == 0) continue; //must be in center of 3x3 block
+
+                int checkX = node.gridX + x;
+                int checkY = node.gridY + y;
+
+                //is this inside grid?
+                if (checkX >= 0 && checkX < gridSizeX && checkY >= 0 && checkY < gridSizeY)
+                {
+                    neighbors.Add(grid[checkX, checkY]);
+                }
+            }
+        }
+        return neighbors;
     }
 
     public Node NodeFromWorldPoint(Vector3 WorldPosition)
@@ -48,7 +72,7 @@ public class GridMaker : MonoBehaviour
         return grid[x, y]; 
     }
 
-
+    public List<Node> path;
     private void OnDrawGizmos() //helps to visualize
     {
         Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y)); 
@@ -58,6 +82,13 @@ public class GridMaker : MonoBehaviour
             foreach (Node n in grid)
             {
                 Gizmos.color = (n.walkable) ? Color.white : Color.red; //If true, set to white, else set to red gizmo color.
+                if (path != null)
+                {
+                    if (path.Contains(n))
+                    {
+                        Gizmos.color = Color.black;
+                    }
+                }
                 Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
             }
         }
