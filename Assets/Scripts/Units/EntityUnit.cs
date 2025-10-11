@@ -248,39 +248,47 @@ public class EntityUnit : MonoBehaviour
     }
     
     void MoveWithSimpleFollowing()
+{
+    if (currentPath == null || currentWaypointIndex >= currentPath.Length)
     {
-        if (currentPath == null || currentWaypointIndex >= currentPath.Length)
+        CheckWaypointChain();
+        return;
+    }
+
+    Vector3 targetWaypoint = currentPath[currentWaypointIndex];
+    Vector3 toTarget = (targetWaypoint - transform.position);
+    float distance = toTarget.magnitude;
+
+    if (distance < arrivalRadius)
+    {
+        currentWaypointIndex++;
+        if (currentWaypointIndex >= currentPath.Length)
         {
             CheckWaypointChain();
             return;
         }
-        
-        Vector3 targetWaypoint = currentPath[currentWaypointIndex];
-        Vector3 direction = (targetWaypoint - transform.position).normalized;
-        
-        // Update heading smoothly
-        heading = Vector3.Lerp(heading, direction, Time.deltaTime * rotationSpeed);
-        
-        // Move in heading direction
-        transform.position += heading * maxSpeed * Time.deltaTime;
-        
-        // Rotate to face heading
-        if (heading != Vector3.zero)
-        {
-            transform.rotation = Quaternion.LookRotation(heading);
-        }
-        
-        // Check if reached waypoint
-        float distToWaypoint = Vector3.Distance(transform.position, targetWaypoint);
-        if (distToWaypoint < arrivalRadius)
-        {
-            currentWaypointIndex++;
-            if (currentWaypointIndex >= currentPath.Length)
-            {
-                CheckWaypointChain();
-            }
-        }
+        targetWaypoint = currentPath[currentWaypointIndex];
+        toTarget = (targetWaypoint - transform.position);
     }
+
+    Vector3 desiredDirection = toTarget.normalized;
+
+    // Gradually rotate heading toward desiredDirection
+    heading = Vector3.RotateTowards(heading, desiredDirection, rotationSpeed * Time.deltaTime, 0f);
+    heading.Normalize();
+
+    // Move in heading direction
+    transform.position += heading * maxSpeed * Time.deltaTime;
+
+    // Smoothly rotate model to face heading
+    if (heading != Vector3.zero)
+    {
+        Quaternion targetRotation = Quaternion.LookRotation(heading);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
+    }
+}
+
+
     
     void MoveWithPotentialFields()
     {
@@ -445,7 +453,21 @@ public class EntityUnit : MonoBehaviour
         lineRenderer.positionCount = 0;
         followTarget = null;
         isExecutingQueue = false;
+
+        // Optional: face the last waypoint if available
+        if (currentPath != null && currentPath.Length > 0)
+        {
+            Vector3 toLast = currentPath[currentPath.Length - 1] - transform.position;
+            toLast.y = 0f;
+            if (toLast.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.LookRotation(toLast.normalized);
+            }
+        }
+
+        currentPath = null;
     }
+
     
     public void SetSelected(bool selected)
     {

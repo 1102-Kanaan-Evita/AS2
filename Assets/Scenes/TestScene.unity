@@ -151,10 +151,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -406,10 +406,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -556,10 +556,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -700,10 +700,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -844,10 +844,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -1782,10 +1782,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -1926,10 +1926,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5bf9790d931cdc42a1cad0603120bc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntityUnit
-  maxSpeed: 5
-  maxForce: 10
+  maxSpeed: 1
+  maxForce: 3
   arrivalRadius: 0.5
-  rotationSpeed: 5
+  rotationSpeed: 1
   obstacleRepulsionRange: 3
   obstacleRepulsionStrength: 5
   entityRepulsionRange: 5.14
@@ -2049,6 +2049,7 @@ GameObject:
   - component: {fileID: 2128273466}
   - component: {fileID: 2128273465}
   - component: {fileID: 2128273464}
+  - component: {fileID: 2128273467}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2123,13 +2124,39 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2128273463}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: -0.0366105, y: 80, z: 0.087087505}
   m_LocalScale: {x: 0.05, y: 0.05, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1571682204}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!114 &2128273467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2128273463}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a2fded578980d54489db23ef1a35fff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RTSCamera
+  panSpeed: 25
+  edgePanSpeed: 22
+  edgePanBorderThickness: 10
+  enableEdgePanning: 1
+  lockYAxis: 0
+  zoomSpeed: 22
+  minZoom: 2
+  maxZoom: 100
+  rotationSpeed: 100
+  enableRotation: 1
+  useBounds: 1
+  minBounds: {x: -50, y: -50}
+  maxBounds: {x: 50, y: 50}
+  smoothTime: 0.1
 --- !u!1 &2129791458
 GameObject:
   m_ObjectHideFlags: 0
