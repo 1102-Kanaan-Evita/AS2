@@ -14,8 +14,8 @@ TagManager:
   - UI
   - 
   - 
-  - 
-  - Unit
+  - Selectable
+  - Entity
   - Unwalkable
   - Walkable
   - 
