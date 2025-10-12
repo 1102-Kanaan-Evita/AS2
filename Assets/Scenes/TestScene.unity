@@ -166,6 +166,9 @@ MonoBehaviour:
   personalSpaceRadius: 1
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 0, g: 1, b: 0, a: 1}
+  showHeading: 1
+  headingLineLength: 20
+  headingColor: {r: 0.9056604, g: 0, b: 0, a: 1}
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1024
@@ -313,6 +316,9 @@ MonoBehaviour:
   personalSpaceRadius: 1
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 0, g: 1, b: 0, a: 1}
+  showHeading: 1
+  headingLineLength: 20
+  headingColor: {r: 0.9056604, g: 0, b: 0, a: 1}
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1024
@@ -571,6 +577,9 @@ MonoBehaviour:
   personalSpaceRadius: 1
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 0, g: 1, b: 0, a: 1}
+  showHeading: 1
+  headingLineLength: 20
+  headingColor: {r: 0.9056604, g: 0, b: 0, a: 1}
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1024
@@ -718,6 +727,9 @@ MonoBehaviour:
   personalSpaceRadius: 1
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 0, g: 1, b: 0, a: 1}
+  showHeading: 1
+  headingLineLength: 20
+  headingColor: {r: 0.9056604, g: 0, b: 0, a: 1}
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1024
@@ -923,7 +935,7 @@ MonoBehaviour:
   formationSpacing: 3
   useRRT: 0
   showFormationGizmos: 1
-  pathVisualizationMode: 1
+  pathVisualizationMode: 0
   pathVisualizationColor: {r: 0, g: 1, b: 1, a: 1}
   pathPointSize: 0.3
 --- !u!114 &803996344
@@ -1328,6 +1340,9 @@ MonoBehaviour:
   personalSpaceRadius: 1
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 0, g: 1, b: 0, a: 1}
+  showHeading: 1
+  headingLineLength: 20
+  headingColor: {r: 0.9056604, g: 0, b: 0, a: 1}
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1024
@@ -1880,6 +1895,9 @@ MonoBehaviour:
   personalSpaceRadius: 1
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 0, g: 1, b: 0, a: 1}
+  showHeading: 1
+  headingLineLength: 20
+  headingColor: {r: 0.9056604, g: 0, b: 0, a: 1}
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1024

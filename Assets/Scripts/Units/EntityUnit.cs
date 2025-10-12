@@ -26,6 +26,8 @@ public class EntityUnit : MonoBehaviour
     [Header("Visual")]
     public Color normalColor = Color.white;
     public Color selectedColor = Color.green;
+    public bool showHeading = true;
+    public float headingLineLength = 2f;
     public LayerMask obstacleLayer;
     public LayerMask entityLayer;
     
@@ -71,16 +73,6 @@ public class EntityUnit : MonoBehaviour
     
     void Start()
     {
-        LineRenderer[] existingRenderers = GetComponents<LineRenderer>();
-        if (existingRenderers.Length > 1)
-        {
-            Debug.LogWarning(gameObject.name + " has multiple LineRenderers! Cleaning up...");
-            for (int i = 1; i < existingRenderers.Length; i++)
-            {
-                Destroy(existingRenderers[i]);
-            }
-        }
-        
         lineRenderer = GetComponent<LineRenderer>();
         if (lineRenderer == null)
         {
@@ -689,6 +681,20 @@ public class EntityUnit : MonoBehaviour
     
     void OnDrawGizmos()
     {
+        // Draw heading line (visible in both Scene and Game view)
+        if (showHeading && Application.isPlaying)
+        {
+            Gizmos.color = Color.white;
+            Vector3 startPos = transform.position + Vector3.up * 0.5f;
+            Vector3 endPos = startPos + heading * headingLineLength;
+            Gizmos.DrawLine(startPos, endPos);
+            // Draw an arrowhead
+            Vector3 right = Quaternion.Euler(0, 25, 0) * -heading * 0.3f;
+            Vector3 left = Quaternion.Euler(0, -25, 0) * -heading * 0.3f;
+            Gizmos.DrawLine(endPos, endPos + right);
+            Gizmos.DrawLine(endPos, endPos + left);
+        }
+        
         if (currentPath != null && currentPath.Length > 0)
         {
             for (int i = 0; i < currentWaypointIndex && i < currentPath.Length; i++)
@@ -737,7 +743,10 @@ public class EntityUnit : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, personalSpaceRadius);
         
         Gizmos.color = Color.magenta;
-        Gizmos.DrawRay(transform.position, heading * 2f);
+        if (Application.isPlaying)
+        {
+            Gizmos.DrawRay(transform.position, heading * 2f);
+        }
         
         if (followTarget != null)
         {
