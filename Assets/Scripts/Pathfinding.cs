@@ -7,6 +7,10 @@ public class Pathfinding : MonoBehaviour
 {
     GridMaker grid;
     PathRequestManager requestManager;
+    
+    [Header("Path Simplification")]
+    public bool simplifyPath = true;
+    public float simplificationAngleThreshold = 5f; // Degrees - smaller = more waypoints, VERY IMPORTANT FOR OBSTACLES
 
     public void StartFindPath(Vector3 startPos, Vector3 targetPos)
     {
@@ -18,10 +22,6 @@ public class Pathfinding : MonoBehaviour
         requestManager = GetComponent<PathRequestManager>();
         grid = GetComponent<GridMaker>();
     }
-
-
-
-
 
     IEnumerator FindPath(Vector3 startPos, Vector3 targetPos)
     {
@@ -97,33 +97,61 @@ public class Pathfinding : MonoBehaviour
             currentNode = currentNode.parent;
         }
 
-        Vector3[] waypoints = SimplifyPath(path);
-        Array.Reverse(waypoints);
+        Vector3[] waypoints;
+        if (simplifyPath)
+        {
+            waypoints = SimplifyPath(path);
+        }
+        else
+        {
+            // Return all nodes as waypoints
+            waypoints = new Vector3[path.Count];
+            for (int i = 0; i < path.Count; i++)
+            {
+                waypoints[i] = path[path.Count - 1 - i].worldPosition;
+            }
+        }
+        
+        // DON'T reverse - SimplifyPath already handles order correctly
+        // Array.Reverse(waypoints); // REMOVED THIS LINE
 
         return waypoints;
     }
     
-    Vector3[] SimplifyPath(List<Node> path) //Simplifies path to waypoints which we will print later.
+    Vector3[] SimplifyPath(List<Node> path)
     {
         List<Vector3> waypoints = new List<Vector3>();
         Vector2 directionOld = Vector2.zero;
 
-        for (int i = 1; i < path.Count; i++)
+        // Always add the first point
+        if (path.Count > 0)
+        {
+            waypoints.Add(path[path.Count - 1].worldPosition);
+        }
+
+        for (int i = path.Count - 2; i > 0; i--)
         {
             Vector2 directionNew = new Vector2(
-                path[i - 1].gridX - path[i].gridX,
-                path[i - 1].gridY - path[i].gridY
-            );
+                path[i + 1].gridX - path[i].gridX,
+                path[i + 1].gridY - path[i].gridY
+            ).normalized;
 
-            if (directionNew != directionOld)
+            // Check if direction changed significantly
+            if (directionOld == Vector2.zero || Vector2.Angle(directionOld, directionNew) > simplificationAngleThreshold)
             {
                 waypoints.Add(path[i].worldPosition);
+                directionOld = directionNew;
             }
-            directionOld = directionNew;
         }
+        
+        // Always add the last point
+        if (path.Count > 0)
+        {
+            waypoints.Add(path[0].worldPosition);
+        }
+
         return waypoints.ToArray();
     }
-
 
     int GetDistance(Node nodeA, Node nodeB)
     {
@@ -136,5 +164,4 @@ public class Pathfinding : MonoBehaviour
         }
         return 14 * dstX + 10 * (dstY - dstX);
     }
-
 }

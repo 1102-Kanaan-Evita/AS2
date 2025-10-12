@@ -1,6 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+public enum MovementMode
+{
+    AStar,              // Pure A* pathfinding, no avoidance
+    AStarPF,            // A* pathfinding + Potential Fields for avoidance
+    PotentialFieldsOnly // No pathfinding, just move toward goal with forces
+}
+
 public class RTSController : MonoBehaviour
 {
     [Header("Selection")]
@@ -9,21 +16,23 @@ public class RTSController : MonoBehaviour
     public Color selectionBorderColor = Color.green;
     
     [Header("Movement Settings")]
-    public bool usePotentialFields = false;
+    public MovementMode movementMode = MovementMode.AStarPF;
     public LayerMask obstacleLayer;
+    public float formationSpacing = 3f;
+    
+    [Header("Visual")]
+    public bool showFormationGizmos = true;
     
     private Vector3 mouseDownPos;
     private bool isDragging = false;
     private List<EntityUnit> selectedUnits = new List<EntityUnit>();
     private Rect selectionRect;
     
-    // For shift+right click waypoint chaining
     private List<Vector3> waypointChain = new List<Vector3>();
     private LineRenderer waypointLineRenderer;
     
     void Start()
     {
-        // Create line renderer for showing waypoint chains
         GameObject waypointLine = new GameObject("WaypointLine");
         waypointLineRenderer = waypointLine.AddComponent<LineRenderer>();
         waypointLineRenderer.startWidth = 0.3f;
@@ -43,14 +52,22 @@ public class RTSController : MonoBehaviour
     
     void HandleKeyCommands()
     {
-        // Toggle potential fields with 'P' key
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            usePotentialFields = !usePotentialFields;
-            Debug.Log("Potential Fields: " + (usePotentialFields ? "ON" : "OFF"));
+            movementMode = MovementMode.AStar;
+            Debug.Log("Movement Mode: A* Only");
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            movementMode = MovementMode.AStarPF;
+            Debug.Log("Movement Mode: A* + Potential Fields");
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            movementMode = MovementMode.PotentialFieldsOnly;
+            Debug.Log("Movement Mode: Potential Fields Only");
         }
         
-        // Clear waypoint chain with 'C' key
         if (Input.GetKeyDown(KeyCode.C))
         {
             waypointChain.Clear();
@@ -60,13 +77,11 @@ public class RTSController : MonoBehaviour
     
     void HandleSelection()
     {
-        // Left mouse button down - start selection
         if (Input.GetMouseButtonDown(0))
         {
             mouseDownPos = Input.mousePosition;
             isDragging = true;
             
-            // Single click selection
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             
@@ -88,20 +103,17 @@ public class RTSController : MonoBehaviour
             }
         }
         
-        // Left mouse button held - update selection box
         if (Input.GetMouseButton(0) && isDragging)
         {
             Vector3 currentMousePos = Input.mousePosition;
             float distance = Vector3.Distance(mouseDownPos, currentMousePos);
             
-            // Only do box selection if dragged more than a threshold
             if (distance > 10f)
             {
                 UpdateSelectionBox(mouseDownPos, currentMousePos);
             }
         }
         
-        // Left mouse button up - finalize selection
         if (Input.GetMouseButtonUp(0))
         {
             if (isDragging && Vector3.Distance(mouseDownPos, Input.mousePosition) > 10f)
@@ -114,7 +126,6 @@ public class RTSController : MonoBehaviour
     
     void HandleMovementCommands()
     {
-        // Right click - move selected units
         if (Input.GetMouseButtonDown(1) && selectedUnits.Count > 0)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -125,39 +136,33 @@ public class RTSController : MonoBehaviour
                 bool isQueueing = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
                 bool isInterceptMode = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
                 
-                // Check if right-clicked on another entity to follow
                 EntityUnit targetEntity = hit.collider.GetComponent<EntityUnit>();
                 
                 if (targetEntity != null && !selectedUnits.Contains(targetEntity))
                 {
-                    // Follow mode
                     if (isInterceptMode)
                     {
-                        // Intercept mode - move to predicted location
-                        Vector3 interceptPos = targetEntity.PredictPosition(2f); // 2 second prediction
+                        Vector3 interceptPos = targetEntity.PredictPosition(2f);
                         IssueMovementCommand(interceptPos, isQueueing, null);
                     }
                     else
                     {
-                        // Follow mode - track the entity
                         IssueMovementCommand(hit.point, isQueueing, targetEntity);
                     }
                 }
                 else
                 {
-                    // Normal move to location
                     Vector3 targetPos = hit.point;
                     IssueMovementCommand(targetPos, isQueueing, null);
                 }
             }
         }
         
-        // Enter key to execute waypoint chain (kept for backward compatibility)
         if (Input.GetKeyDown(KeyCode.Return) && waypointChain.Count > 0 && selectedUnits.Count > 0)
         {
             foreach (EntityUnit unit in selectedUnits)
             {
-                unit.SetWaypointChain(new List<Vector3>(waypointChain), usePotentialFields);
+                unit.SetWaypointChain(new List<Vector3>(waypointChain), movementMode);
             }
             waypointChain.Clear();
             waypointLineRenderer.positionCount = 0;
@@ -170,36 +175,57 @@ public class RTSController : MonoBehaviour
         {
             if (followTarget != null)
             {
-                selectedUnits[0].FollowEntity(followTarget, usePotentialFields, queueCommand);
+                selectedUnits[0].FollowEntity(followTarget, movementMode, queueCommand);
             }
             else
             {
-                selectedUnits[0].MoveTo(destination, usePotentialFields, queueCommand);
+                selectedUnits[0].MoveTo(destination, movementMode, queueCommand);
             }
         }
         else
         {
-            // Formation movement - spread units out slightly
-            int index = 0;
-            int cols = Mathf.CeilToInt(Mathf.Sqrt(selectedUnits.Count));
-            float spacing = 3f;
+            int unitCount = selectedUnits.Count;
             
-            foreach (EntityUnit unit in selectedUnits)
+            for (int i = 0; i < unitCount; i++)
             {
-                int row = index / cols;
-                int col = index % cols;
-                Vector3 offset = new Vector3((col - cols/2f) * spacing, 0, (row - cols/2f) * spacing);
+                Vector3 unitDestination;
                 
-                if (followTarget != null)
+                if (unitCount == 2)
                 {
-                    // Follow with formation offset
-                    unit.FollowEntity(followTarget, usePotentialFields, queueCommand, offset);
+                    unitDestination = destination + new Vector3((i == 0 ? -formationSpacing : formationSpacing), 0, 0);
+                }
+                else if (unitCount <= 5)
+                {
+                    float angle = (360f / unitCount) * i * Mathf.Deg2Rad;
+                    Vector3 offset = new Vector3(
+                        Mathf.Cos(angle) * formationSpacing,
+                        0,
+                        Mathf.Sin(angle) * formationSpacing
+                    );
+                    unitDestination = destination + offset;
                 }
                 else
                 {
-                    unit.MoveTo(destination + offset, usePotentialFields, queueCommand);
+                    int ring = i / 6;
+                    int posInRing = i % 6;
+                    float ringRadius = formationSpacing * (ring + 1);
+                    float angle = (360f / 6) * posInRing * Mathf.Deg2Rad;
+                    Vector3 offset = new Vector3(
+                        Mathf.Cos(angle) * ringRadius,
+                        0,
+                        Mathf.Sin(angle) * ringRadius
+                    );
+                    unitDestination = destination + offset;
                 }
-                index++;
+                
+                if (followTarget != null)
+                {
+                    selectedUnits[i].FollowEntity(followTarget, movementMode, queueCommand, unitDestination - destination);
+                }
+                else
+                {
+                    selectedUnits[i].MoveTo(unitDestination, movementMode, queueCommand);
+                }
             }
         }
     }
@@ -261,7 +287,6 @@ public class RTSController : MonoBehaviour
     
     void OnGUI()
     {
-        // Draw selection box
         if (isDragging && Vector3.Distance(mouseDownPos, Input.mousePosition) > 10f)
         {
             Rect screenRect = new Rect(
@@ -271,20 +296,31 @@ public class RTSController : MonoBehaviour
                 selectionRect.height
             );
             
-            // Fill
             GUI.color = selectionBoxColor;
             GUI.DrawTexture(screenRect, Texture2D.whiteTexture);
             
-            // Border
             GUI.color = selectionBorderColor;
             DrawRectBorder(screenRect, 2);
         }
         
-        // Display mode
         GUI.color = Color.white;
-        GUI.Label(new Rect(10, 10, 300, 30), "Movement Mode: " + (usePotentialFields ? "A* + Potential Fields" : "A* Only"));
-        GUI.Label(new Rect(10, 30, 300, 30), "Press 'P' to toggle | Shift+RClick for waypoints");
-        GUI.Label(new Rect(10, 50, 300, 30), "Selected Units: " + selectedUnits.Count);
+        string modeText = "";
+        switch (movementMode)
+        {
+            case MovementMode.AStar:
+                modeText = "A* Only";
+                break;
+            case MovementMode.AStarPF:
+                modeText = "A* + Potential Fields";
+                break;
+            case MovementMode.PotentialFieldsOnly:
+                modeText = "Potential Fields Only";
+                break;
+        }
+        GUI.Label(new Rect(10, 10, 400, 30), "Movement Mode: " + modeText);
+        GUI.Label(new Rect(10, 30, 400, 30), "Press 1: A* | 2: A*+PF | 3: PF Only");
+        GUI.Label(new Rect(10, 50, 400, 30), "RClick entity to follow | Ctrl+RClick to intercept");
+        GUI.Label(new Rect(10, 70, 400, 30), "Selected Units: " + selectedUnits.Count);
     }
     
     void DrawRectBorder(Rect rect, int thickness)
@@ -293,5 +329,60 @@ public class RTSController : MonoBehaviour
         GUI.DrawTexture(new Rect(rect.x, rect.y + rect.height - thickness, rect.width, thickness), Texture2D.whiteTexture);
         GUI.DrawTexture(new Rect(rect.x, rect.y, thickness, rect.height), Texture2D.whiteTexture);
         GUI.DrawTexture(new Rect(rect.x + rect.width - thickness, rect.y, thickness, rect.height), Texture2D.whiteTexture);
+    }
+    
+    void OnDrawGizmos()
+    {
+        if (!showFormationGizmos || selectedUnits.Count <= 1) return;
+        
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        
+        if (Physics.Raycast(ray, out hit))
+        {
+            Vector3 destination = hit.point;
+            int unitCount = selectedUnits.Count;
+            
+            Gizmos.color = new Color(0, 1, 0, 0.3f);
+            
+            for (int i = 0; i < unitCount; i++)
+            {
+                Vector3 unitDestination;
+                
+                if (unitCount == 2)
+                {
+                    unitDestination = destination + new Vector3((i == 0 ? -formationSpacing : formationSpacing), 0, 0);
+                }
+                else if (unitCount <= 5)
+                {
+                    float angle = (360f / unitCount) * i * Mathf.Deg2Rad;
+                    Vector3 offset = new Vector3(
+                        Mathf.Cos(angle) * formationSpacing,
+                        0,
+                        Mathf.Sin(angle) * formationSpacing
+                    );
+                    unitDestination = destination + offset;
+                }
+                else
+                {
+                    int ring = i / 6;
+                    int posInRing = i % 6;
+                    float ringRadius = formationSpacing * (ring + 1);
+                    float angle = (360f / 6) * posInRing * Mathf.Deg2Rad;
+                    Vector3 offset = new Vector3(
+                        Mathf.Cos(angle) * ringRadius,
+                        0,
+                        Mathf.Sin(angle) * ringRadius
+                    );
+                    unitDestination = destination + offset;
+                }
+                
+                Gizmos.DrawWireSphere(unitDestination, 0.5f);
+                Gizmos.DrawLine(destination, unitDestination);
+            }
+            
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(destination, 0.3f);
+        }
     }
 }
