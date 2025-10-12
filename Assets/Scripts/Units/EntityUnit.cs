@@ -39,6 +39,7 @@ public class EntityUnit : MonoBehaviour
     private int currentWaypointIndex = 0;
     private bool isMoving = false;
     private MovementMode currentMovementMode;
+    private bool useRRTForCurrentPath = false;
     private List<Vector3> waypointChain = new List<Vector3>();
     private int currentChainIndex = 0;
     
@@ -56,13 +57,15 @@ public class EntityUnit : MonoBehaviour
         public EntityUnit followTarget;
         public Vector3 followOffset;
         public MovementMode mode;
+        public bool useRRT;
         
-        public MovementCommand(Vector3 dest, EntityUnit target, Vector3 offset, MovementMode m)
+        public MovementCommand(Vector3 dest, EntityUnit target, Vector3 offset, MovementMode m, bool rrt)
         {
             destination = dest;
             followTarget = target;
             followOffset = offset;
             mode = m;
+            useRRT = rrt;
         }
     }
     
@@ -125,7 +128,7 @@ public class EntityUnit : MonoBehaviour
                     }
                     else
                     {
-                        PathRequestManager.RequestPath(transform.position, newDestination, OnPathFound);
+                        PathRequestManager.RequestPath(transform.position, newDestination, OnPathFound, useRRTForCurrentPath);
                     }
                     followUpdateTimer = 0f;
                 }
@@ -152,20 +155,26 @@ public class EntityUnit : MonoBehaviour
     
     public void MoveTo(Vector3 destination, MovementMode mode)
     {
-        MoveTo(destination, mode, false);
+        MoveTo(destination, mode, false, false);
     }
     
     public void MoveTo(Vector3 destination, MovementMode mode, bool queueCommand)
     {
+        MoveTo(destination, mode, queueCommand, false);
+    }
+    
+    public void MoveTo(Vector3 destination, MovementMode mode, bool queueCommand, bool useRRT)
+    {
         if (queueCommand)
         {
-            commandQueue.Enqueue(new MovementCommand(destination, null, Vector3.zero, mode));
+            commandQueue.Enqueue(new MovementCommand(destination, null, Vector3.zero, mode, useRRT));
         }
         else
         {
             commandQueue.Clear();
             followTarget = null;
             currentMovementMode = mode;
+            useRRTForCurrentPath = useRRT;
             waypointChain.Clear();
             currentChainIndex = 0;
             
@@ -178,26 +187,31 @@ public class EntityUnit : MonoBehaviour
             }
             else
             {
-                PathRequestManager.RequestPath(transform.position, destination, OnPathFound);
+                PathRequestManager.RequestPath(transform.position, destination, OnPathFound, useRRT);
             }
         }
     }
     
     public void FollowEntity(EntityUnit target, MovementMode mode)
     {
-        FollowEntity(target, mode, false, Vector3.zero);
+        FollowEntity(target, mode, false, Vector3.zero, false);
     }
     
     public void FollowEntity(EntityUnit target, MovementMode mode, bool queueCommand)
     {
-        FollowEntity(target, mode, queueCommand, Vector3.zero);
+        FollowEntity(target, mode, queueCommand, Vector3.zero, false);
     }
     
     public void FollowEntity(EntityUnit target, MovementMode mode, bool queueCommand, Vector3 offset)
     {
+        FollowEntity(target, mode, queueCommand, offset, false);
+    }
+    
+    public void FollowEntity(EntityUnit target, MovementMode mode, bool queueCommand, Vector3 offset, bool useRRT)
+    {
         if (queueCommand)
         {
-            commandQueue.Enqueue(new MovementCommand(Vector3.zero, target, offset, mode));
+            commandQueue.Enqueue(new MovementCommand(Vector3.zero, target, offset, mode, useRRT));
         }
         else
         {
@@ -205,6 +219,7 @@ public class EntityUnit : MonoBehaviour
             followTarget = target;
             followOffset = offset;
             currentMovementMode = mode;
+            useRRTForCurrentPath = useRRT;
             waypointChain.Clear();
             currentChainIndex = 0;
             followUpdateTimer = 0f;
@@ -220,7 +235,7 @@ public class EntityUnit : MonoBehaviour
             }
             else
             {
-                PathRequestManager.RequestPath(transform.position, destination, OnPathFound);
+                PathRequestManager.RequestPath(transform.position, destination, OnPathFound, useRRT);
             }
         }
     }
@@ -232,7 +247,13 @@ public class EntityUnit : MonoBehaviour
     
     public void SetWaypointChain(List<Vector3> waypoints, MovementMode mode)
     {
+        SetWaypointChain(waypoints, mode, false);
+    }
+    
+    public void SetWaypointChain(List<Vector3> waypoints, MovementMode mode, bool useRRT)
+    {
         currentMovementMode = mode;
+        useRRTForCurrentPath = useRRT;
         waypointChain = new List<Vector3>(waypoints);
         currentChainIndex = 0;
         
@@ -246,7 +267,7 @@ public class EntityUnit : MonoBehaviour
             }
             else
             {
-                PathRequestManager.RequestPath(transform.position, waypointChain[0], OnPathFound);
+                PathRequestManager.RequestPath(transform.position, waypointChain[0], OnPathFound, useRRT);
             }
         }
     }
@@ -263,6 +284,7 @@ public class EntityUnit : MonoBehaviour
             followTarget = cmd.followTarget;
             followOffset = cmd.followOffset;
             currentMovementMode = cmd.mode;
+            useRRTForCurrentPath = cmd.useRRT;
             followUpdateTimer = 0f;
             
             Vector3 destination = cmd.followTarget.transform.position + cmd.followOffset;
@@ -275,13 +297,14 @@ public class EntityUnit : MonoBehaviour
             }
             else
             {
-                PathRequestManager.RequestPath(transform.position, destination, OnPathFound);
+                PathRequestManager.RequestPath(transform.position, destination, OnPathFound, cmd.useRRT);
             }
         }
         else
         {
             followTarget = null;
             currentMovementMode = cmd.mode;
+            useRRTForCurrentPath = cmd.useRRT;
             
             if (cmd.mode == MovementMode.PotentialFieldsOnly)
             {
@@ -291,7 +314,7 @@ public class EntityUnit : MonoBehaviour
             }
             else
             {
-                PathRequestManager.RequestPath(transform.position, cmd.destination, OnPathFound);
+                PathRequestManager.RequestPath(transform.position, cmd.destination, OnPathFound, cmd.useRRT);
             }
         }
     }
@@ -625,7 +648,7 @@ public class EntityUnit : MonoBehaviour
             }
             else
             {
-                PathRequestManager.RequestPath(transform.position, waypointChain[currentChainIndex], OnPathFound);
+                PathRequestManager.RequestPath(transform.position, waypointChain[currentChainIndex], OnPathFound, useRRTForCurrentPath);
             }
         }
         else

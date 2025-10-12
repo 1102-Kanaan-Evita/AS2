@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 public enum MovementMode
 {
-    AStar,              // Pure A* pathfinding, no avoidance
-    AStarPF,            // A* pathfinding + Potential Fields for avoidance
-    PotentialFieldsOnly // No pathfinding, just move toward goal with forces
+    AStar,
+    AStarPF,
+    PotentialFieldsOnly
 }
 
 public class RTSController : MonoBehaviour
@@ -20,8 +20,16 @@ public class RTSController : MonoBehaviour
     public LayerMask obstacleLayer;
     public float formationSpacing = 3f;
     
+    [Header("Pathfinding Algorithm")]
+    public bool useRRT = false; // Toggle between A* and RRT
+    
     [Header("Visual")]
     public bool showFormationGizmos = true;
+    
+    [Header("Path Visualization Mode")]
+    public bool pathVisualizationMode = false;
+    public Color pathVisualizationColor = Color.cyan;
+    public float pathPointSize = 0.3f;
     
     private Vector3 mouseDownPos;
     private bool isDragging = false;
@@ -30,6 +38,11 @@ public class RTSController : MonoBehaviour
     
     private List<Vector3> waypointChain = new List<Vector3>();
     private LineRenderer waypointLineRenderer;
+    
+    private Vector3? pathVisStart = null;
+    private Vector3? pathVisEnd = null;
+    private Vector3[] visualizedPath = null;
+    private LineRenderer pathVisLineRenderer;
     
     void Start()
     {
@@ -41,37 +54,98 @@ public class RTSController : MonoBehaviour
         waypointLineRenderer.startColor = Color.yellow;
         waypointLineRenderer.endColor = Color.yellow;
         waypointLineRenderer.positionCount = 0;
+        
+        GameObject pathVisLine = new GameObject("PathVisualizationLine");
+        pathVisLineRenderer = pathVisLine.AddComponent<LineRenderer>();
+        pathVisLineRenderer.startWidth = 0.4f;
+        pathVisLineRenderer.endWidth = 0.4f;
+        pathVisLineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+        pathVisLineRenderer.startColor = pathVisualizationColor;
+        pathVisLineRenderer.endColor = pathVisualizationColor;
+        pathVisLineRenderer.positionCount = 0;
     }
     
     void Update()
     {
-        HandleSelection();
-        HandleMovementCommands();
+        if (pathVisualizationMode)
+        {
+            HandlePathVisualization();
+        }
+        else
+        {
+            HandleSelection();
+            HandleMovementCommands();
+        }
+        
         HandleKeyCommands();
     }
     
     void HandleKeyCommands()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        // Toggle RRT pathfinding - works in both modes
+        if (Input.GetKeyDown(KeyCode.R))
         {
-            movementMode = MovementMode.AStar;
-            Debug.Log("Movement Mode: A* Only");
+            useRRT = !useRRT;
+            Debug.Log("Pathfinding Algorithm: " + (useRRT ? "RRT" : "A*"));
         }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
+        
+        if (Input.GetKeyDown(KeyCode.V))
         {
-            movementMode = MovementMode.AStarPF;
-            Debug.Log("Movement Mode: A* + Potential Fields");
+            pathVisualizationMode = !pathVisualizationMode;
+            
+            if (pathVisualizationMode)
+            {
+                Debug.Log("Path Visualization Mode: ON - Click start, then click end to show path");
+                DeselectAll();
+                pathVisStart = null;
+                pathVisEnd = null;
+                visualizedPath = null;
+                pathVisLineRenderer.positionCount = 0;
+            }
+            else
+            {
+                Debug.Log("Path Visualization Mode: OFF - Normal RTS controls restored");
+                pathVisStart = null;
+                pathVisEnd = null;
+                visualizedPath = null;
+                pathVisLineRenderer.positionCount = 0;
+            }
         }
-        if (Input.GetKeyDown(KeyCode.Alpha3))
+        
+        if (!pathVisualizationMode)
         {
-            movementMode = MovementMode.PotentialFieldsOnly;
-            Debug.Log("Movement Mode: Potential Fields Only");
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+            {
+                movementMode = MovementMode.AStar;
+                Debug.Log("Movement Mode: A* Only");
+            }
+            if (Input.GetKeyDown(KeyCode.Alpha2))
+            {
+                movementMode = MovementMode.AStarPF;
+                Debug.Log("Movement Mode: A* + Potential Fields");
+            }
+            if (Input.GetKeyDown(KeyCode.Alpha3))
+            {
+                movementMode = MovementMode.PotentialFieldsOnly;
+                Debug.Log("Movement Mode: Potential Fields Only");
+            }
         }
         
         if (Input.GetKeyDown(KeyCode.C))
         {
-            waypointChain.Clear();
-            waypointLineRenderer.positionCount = 0;
+            if (pathVisualizationMode)
+            {
+                pathVisStart = null;
+                pathVisEnd = null;
+                visualizedPath = null;
+                pathVisLineRenderer.positionCount = 0;
+                Debug.Log("Path visualization cleared");
+            }
+            else
+            {
+                waypointChain.Clear();
+                waypointLineRenderer.positionCount = 0;
+            }
         }
     }
     
@@ -124,6 +198,89 @@ public class RTSController : MonoBehaviour
         }
     }
     
+    void HandlePathVisualization()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            
+            if (Physics.Raycast(ray, out hit))
+            {
+                if (!pathVisStart.HasValue)
+                {
+                    pathVisStart = hit.point;
+                    Debug.Log("Path start set at: " + hit.point);
+                }
+                else
+                {
+                    pathVisEnd = hit.point;
+                    Debug.Log("Path end set at: " + hit.point);
+                    
+                    // Pass useRRT flag to path request
+                    PathRequestManager.RequestPath(pathVisStart.Value, pathVisEnd.Value, OnPathVisualizationComplete, useRRT);
+                }
+            }
+        }
+        
+        if (Input.GetMouseButtonDown(1))
+        {
+            pathVisStart = null;
+            pathVisEnd = null;
+            visualizedPath = null;
+            pathVisLineRenderer.positionCount = 0;
+            Debug.Log("Path visualization reset - click to set new start point");
+        }
+    }
+    
+    void OnPathVisualizationComplete(Vector3[] path, bool success)
+    {
+        if (success && path.Length > 0)
+        {
+            visualizedPath = path;
+            
+            Vector3 startPoint = pathVisStart.HasValue ? pathVisStart.Value : path[0];
+            Vector3 endPoint = pathVisEnd.HasValue ? pathVisEnd.Value : path[path.Length - 1];
+            
+            pathVisLineRenderer.positionCount = path.Length + 1;
+            pathVisLineRenderer.SetPosition(0, startPoint + Vector3.up * 0.5f);
+            
+            for (int i = 0; i < path.Length; i++)
+            {
+                pathVisLineRenderer.SetPosition(i + 1, path[i] + Vector3.up * 0.5f);
+            }
+            
+            float pathLength = CalculatePathLength(startPoint, path);
+            
+            Debug.Log("Path found with " + path.Length + " waypoints");
+            Debug.Log("Total distance: " + pathLength.ToString("F2") + " units");
+            Debug.Log("Algorithm used: " + (useRRT ? "RRT" : "A*"));
+            
+            pathVisStart = null;
+            pathVisEnd = null;
+        }
+        else
+        {
+            Debug.LogWarning("No path found between points!");
+            pathVisStart = null;
+            pathVisEnd = null;
+        }
+    }
+    
+    float CalculatePathLength(Vector3 startPoint, Vector3[] path)
+    {
+        if (path == null || path.Length == 0) return 0;
+        
+        float length = Vector3.Distance(startPoint, path[0]);
+        
+        for (int i = 1; i < path.Length; i++)
+        {
+            length += Vector3.Distance(path[i - 1], path[i]);
+        }
+        
+        return length;
+    }
+    
     void HandleMovementCommands()
     {
         if (Input.GetMouseButtonDown(1) && selectedUnits.Count > 0)
@@ -162,7 +319,7 @@ public class RTSController : MonoBehaviour
         {
             foreach (EntityUnit unit in selectedUnits)
             {
-                unit.SetWaypointChain(new List<Vector3>(waypointChain), movementMode);
+                unit.SetWaypointChain(new List<Vector3>(waypointChain), movementMode, useRRT);
             }
             waypointChain.Clear();
             waypointLineRenderer.positionCount = 0;
@@ -175,11 +332,11 @@ public class RTSController : MonoBehaviour
         {
             if (followTarget != null)
             {
-                selectedUnits[0].FollowEntity(followTarget, movementMode, queueCommand);
+                selectedUnits[0].FollowEntity(followTarget, movementMode, queueCommand, Vector3.zero, useRRT);
             }
             else
             {
-                selectedUnits[0].MoveTo(destination, movementMode, queueCommand);
+                selectedUnits[0].MoveTo(destination, movementMode, queueCommand, useRRT);
             }
         }
         else
@@ -220,11 +377,11 @@ public class RTSController : MonoBehaviour
                 
                 if (followTarget != null)
                 {
-                    selectedUnits[i].FollowEntity(followTarget, movementMode, queueCommand, unitDestination - destination);
+                    selectedUnits[i].FollowEntity(followTarget, movementMode, queueCommand, unitDestination - destination, useRRT);
                 }
                 else
                 {
-                    selectedUnits[i].MoveTo(unitDestination, movementMode, queueCommand);
+                    selectedUnits[i].MoveTo(unitDestination, movementMode, queueCommand, useRRT);
                 }
             }
         }
@@ -287,7 +444,7 @@ public class RTSController : MonoBehaviour
     
     void OnGUI()
     {
-        if (isDragging && Vector3.Distance(mouseDownPos, Input.mousePosition) > 10f)
+        if (isDragging && Vector3.Distance(mouseDownPos, Input.mousePosition) > 10f && !pathVisualizationMode)
         {
             Rect screenRect = new Rect(
                 selectionRect.x,
@@ -304,23 +461,58 @@ public class RTSController : MonoBehaviour
         }
         
         GUI.color = Color.white;
-        string modeText = "";
-        switch (movementMode)
+        
+        if (pathVisualizationMode)
         {
-            case MovementMode.AStar:
-                modeText = "A* Only";
-                break;
-            case MovementMode.AStarPF:
-                modeText = "A* + Potential Fields";
-                break;
-            case MovementMode.PotentialFieldsOnly:
-                modeText = "Potential Fields Only";
-                break;
+            GUI.Label(new Rect(10, 10, 500, 30), "PATH VISUALIZATION MODE");
+            GUI.Label(new Rect(10, 30, 500, 30), "Algorithm: " + (useRRT ? "RRT" : "A*"));
+            GUI.Label(new Rect(10, 50, 500, 30), "Left Click: Set start point, then end point");
+            GUI.Label(new Rect(10, 70, 500, 30), "Right Click: Clear and reset");
+            GUI.Label(new Rect(10, 90, 500, 30), "Press V: Exit visualization mode");
+            GUI.Label(new Rect(10, 110, 500, 30), "Press R: Toggle RRT/A*");
+            GUI.Label(new Rect(10, 130, 500, 30), "Press C: Clear current path");
+            
+            if (pathVisStart.HasValue)
+            {
+                GUI.Label(new Rect(10, 160, 500, 30), "Start point set - click to set end point");
+            }
+            
+            if (visualizedPath != null && visualizedPath.Length > 0)
+            {
+                float displayLength = 0;
+                if (visualizedPath.Length > 1)
+                {
+                    for (int i = 1; i < visualizedPath.Length; i++)
+                    {
+                        displayLength += Vector3.Distance(visualizedPath[i - 1], visualizedPath[i]);
+                    }
+                }
+                
+                GUI.Label(new Rect(10, 180, 500, 30), "Path: " + visualizedPath.Length + " waypoints, " + 
+                         displayLength.ToString("F2") + " units");
+            }
         }
-        GUI.Label(new Rect(10, 10, 400, 30), "Movement Mode: " + modeText);
-        GUI.Label(new Rect(10, 30, 400, 30), "Press 1: A* | 2: A*+PF | 3: PF Only");
-        GUI.Label(new Rect(10, 50, 400, 30), "RClick entity to follow | Ctrl+RClick to intercept");
-        GUI.Label(new Rect(10, 70, 400, 30), "Selected Units: " + selectedUnits.Count);
+        else
+        {
+            string modeText = "";
+            switch (movementMode)
+            {
+                case MovementMode.AStar:
+                    modeText = "A* Only";
+                    break;
+                case MovementMode.AStarPF:
+                    modeText = "A* + Potential Fields";
+                    break;
+                case MovementMode.PotentialFieldsOnly:
+                    modeText = "Potential Fields Only";
+                    break;
+            }
+            GUI.Label(new Rect(10, 10, 400, 30), "Movement Mode: " + modeText);
+            GUI.Label(new Rect(10, 30, 400, 30), "Pathfinding: " + (useRRT ? "RRT" : "A*"));
+            GUI.Label(new Rect(10, 50, 400, 30), "Press 1: A* | 2: A*+PF | 3: PF Only | R: Toggle RRT | V: Path Viz");
+            GUI.Label(new Rect(10, 70, 400, 30), "RClick entity to follow | Ctrl+RClick to intercept");
+            GUI.Label(new Rect(10, 90, 400, 30), "Selected Units: " + selectedUnits.Count);
+        }
     }
     
     void DrawRectBorder(Rect rect, int thickness)
@@ -333,56 +525,83 @@ public class RTSController : MonoBehaviour
     
     void OnDrawGizmos()
     {
-        if (!showFormationGizmos || selectedUnits.Count <= 1) return;
-        
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-        
-        if (Physics.Raycast(ray, out hit))
+        if (!pathVisualizationMode && showFormationGizmos && selectedUnits.Count > 1)
         {
-            Vector3 destination = hit.point;
-            int unitCount = selectedUnits.Count;
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
             
-            Gizmos.color = new Color(0, 1, 0, 0.3f);
-            
-            for (int i = 0; i < unitCount; i++)
+            if (Physics.Raycast(ray, out hit))
             {
-                Vector3 unitDestination;
+                Vector3 destination = hit.point;
+                int unitCount = selectedUnits.Count;
                 
-                if (unitCount == 2)
+                Gizmos.color = new Color(0, 1, 0, 0.3f);
+                
+                for (int i = 0; i < unitCount; i++)
                 {
-                    unitDestination = destination + new Vector3((i == 0 ? -formationSpacing : formationSpacing), 0, 0);
-                }
-                else if (unitCount <= 5)
-                {
-                    float angle = (360f / unitCount) * i * Mathf.Deg2Rad;
-                    Vector3 offset = new Vector3(
-                        Mathf.Cos(angle) * formationSpacing,
-                        0,
-                        Mathf.Sin(angle) * formationSpacing
-                    );
-                    unitDestination = destination + offset;
-                }
-                else
-                {
-                    int ring = i / 6;
-                    int posInRing = i % 6;
-                    float ringRadius = formationSpacing * (ring + 1);
-                    float angle = (360f / 6) * posInRing * Mathf.Deg2Rad;
-                    Vector3 offset = new Vector3(
-                        Mathf.Cos(angle) * ringRadius,
-                        0,
-                        Mathf.Sin(angle) * ringRadius
-                    );
-                    unitDestination = destination + offset;
+                    Vector3 unitDestination;
+                    
+                    if (unitCount == 2)
+                    {
+                        unitDestination = destination + new Vector3((i == 0 ? -formationSpacing : formationSpacing), 0, 0);
+                    }
+                    else if (unitCount <= 5)
+                    {
+                        float angle = (360f / unitCount) * i * Mathf.Deg2Rad;
+                        Vector3 offset = new Vector3(
+                            Mathf.Cos(angle) * formationSpacing,
+                            0,
+                            Mathf.Sin(angle) * formationSpacing
+                        );
+                        unitDestination = destination + offset;
+                    }
+                    else
+                    {
+                        int ring = i / 6;
+                        int posInRing = i % 6;
+                        float ringRadius = formationSpacing * (ring + 1);
+                        float angle = (360f / 6) * posInRing * Mathf.Deg2Rad;
+                        Vector3 offset = new Vector3(
+                            Mathf.Cos(angle) * ringRadius,
+                            0,
+                            Mathf.Sin(angle) * ringRadius
+                        );
+                        unitDestination = destination + offset;
+                    }
+                    
+                    Gizmos.DrawWireSphere(unitDestination, 0.5f);
+                    Gizmos.DrawLine(destination, unitDestination);
                 }
                 
-                Gizmos.DrawWireSphere(unitDestination, 0.5f);
-                Gizmos.DrawLine(destination, unitDestination);
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawWireSphere(destination, 0.3f);
+            }
+        }
+        
+        if (pathVisualizationMode)
+        {
+            if (pathVisStart.HasValue)
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawSphere(pathVisStart.Value, pathPointSize);
+                Gizmos.DrawWireSphere(pathVisStart.Value, pathPointSize * 2f);
             }
             
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(destination, 0.3f);
+            if (pathVisEnd.HasValue)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawSphere(pathVisEnd.Value, pathPointSize);
+                Gizmos.DrawWireSphere(pathVisEnd.Value, pathPointSize * 2f);
+            }
+            
+            if (visualizedPath != null)
+            {
+                Gizmos.color = pathVisualizationColor;
+                foreach (Vector3 waypoint in visualizedPath)
+                {
+                    Gizmos.DrawSphere(waypoint, pathPointSize * 0.7f);
+                }
+            }
         }
     }
 }
