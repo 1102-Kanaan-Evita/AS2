@@ -116,58 +116,6 @@ Transform:
   - {fileID: 683681363854912405}
   m_Father: {fileID: 6671339035041564124}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2469817369799949732
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 483243905278890156}
-  - component: {fileID: 3782611443757859110}
-  m_Layer: 0
-  m_Name: StartMarker
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &483243905278890156
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2469817369799949732}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -12.63, y: 0, z: 2.04}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6671339035041564124}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3782611443757859110
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2469817369799949732}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e52db10ea3882994ea64b0f282c1c641, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZoneVisualizer
-  zoneRadius: 3
-  zoneColor: {r: 0, g: 1, b: 0, a: 1}
-  transparency: 0.5
-  zoneHeight: 0.15
-  segments: 64
-  showMarker: 0
-  markerHeight: 2
-  markerColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &2706537586301850339
 GameObject:
   m_ObjectHideFlags: 0
@@ -204,7 +152,6 @@ Transform:
   - {fileID: 1625700355949336164}
   - {fileID: 6958393786430647373}
   - {fileID: 7679635149269411405}
-  - {fileID: 483243905278890156}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5893611968559754929

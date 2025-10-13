@@ -639,7 +639,7 @@ Transform:
   m_GameObject: {fileID: 1064048988}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -16, y: 0, z: -9.5}
+  m_LocalPosition: {x: -13.14, y: 0, z: -2.54}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1128,6 +1128,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlaySceneController
   envGen: {fileID: 533781053}
+  playerPrefab: {fileID: 0}
   spawnPoint: {fileID: 1094451323}
   hudPresetLabel: {fileID: 1866958739}
   completeButton: {fileID: 306943350}

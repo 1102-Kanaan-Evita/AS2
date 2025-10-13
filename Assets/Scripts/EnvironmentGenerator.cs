@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Linq;
 
 public class EnvironmentGenerator : MonoBehaviour
 {
@@ -101,7 +102,9 @@ public class EnvironmentGenerator : MonoBehaviour
                     HideZoneVisualsInPrefab(layout);
                     
                     // Check if prefab has its own markers
-                    Transform prefabStart = layout.transform.Find("StartMarker");
+                    Transform prefabStart = layout.GetComponentsInChildren<Transform>(true)
+                     .FirstOrDefault(t => t.name == "StartMarker");
+
                     Transform prefabTarget = layout.transform.Find("TargetMarker");
                     
                     if (prefabStart != null && prefabTarget != null)
@@ -275,6 +278,8 @@ public class EnvironmentGenerator : MonoBehaviour
     
     void SpawnUnits()
     {
+        Debug.Log("Spawning units at: " + (startAreaMarker != null ? startAreaMarker.position.ToString() : "null"));
+
         // Get unit count from GameState
         int unitsToSpawn = GameState.UnitCount;
         
