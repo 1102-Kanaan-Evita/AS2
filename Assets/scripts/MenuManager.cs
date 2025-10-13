@@ -46,8 +46,8 @@ public class MenuManager : MonoBehaviour
 
         if (!boardShuffled)
         {
-            PopulateBoard();      
-            ShuffleButtons();     
+            PopulateBoard();
+            ShuffleButtons();
             boardShuffled = true;
         }
         else
@@ -64,24 +64,24 @@ public class MenuManager : MonoBehaviour
             showLabelsToggle.onValueChanged.AddListener(OnShowLabelsChanged);
             showAllLabels = showLabelsToggle.isOn;
         }
-        
+
         // Setup unit count input field
         if (unitCountInput != null)
         {
             unitCountInput.text = GameState.UnitCount.ToString();
             unitCountInput.onEndEdit.AddListener(OnUnitCountChanged);
         }
-        
+
         // Setup pathfinding dropdown
         if (pathfindingDropdown != null)
         {
             pathfindingDropdown.ClearOptions();
-            pathfindingDropdown.AddOptions(new System.Collections.Generic.List<string> 
-            { 
-                "A* Pathfinding", 
-                "Potential Fields Only", 
+            pathfindingDropdown.AddOptions(new System.Collections.Generic.List<string>
+            {
+                "A* Pathfinding",
+                "Potential Fields Only",
                 "A* + Potential Fields",
-                "RRT Pathfinding" 
+                "RRT Pathfinding"
             });
             // Set to current saved value
             pathfindingDropdown.value = (int)GameState.SelectedPathfinding;
@@ -202,7 +202,7 @@ public class MenuManager : MonoBehaviour
         foreach (var jb in _buttons)
             jb.UpdateDisplay(showAllLabels);
     }
-    
+
     public void OnUnitCountChanged(string value)
     {
         if (int.TryParse(value, out int count))
@@ -220,7 +220,7 @@ public class MenuManager : MonoBehaviour
             Debug.LogWarning("Invalid unit count input");
         }
     }
-    
+
     public void OnPathfindingChanged(int index)
     {
         GameState.SelectedPathfinding = (GameState.PathfindingMethod)index;

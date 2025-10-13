@@ -45,7 +45,7 @@ public class PlaySceneController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.C) && envGen != null)
         {
             Debug.Log("Regenerating environment...");
-            
+
             envGen.ClearEnvironment();
             envGen.GenerateEnvironment(activePreset);
 
