@@ -17,8 +17,15 @@ public class GridMaker : MonoBehaviour
         nodeDiameter = nodeRadius * 2;
         gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter); // gives how many nodes we can fit in world size.
         gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
+       // CreateGrid();
+    }
+
+    public void Bake()
+    {
+        Debug.Log("Baking grid after environment generation...");
         CreateGrid();
     }
+
 
     public int MaxSize
     {
@@ -28,7 +35,7 @@ public class GridMaker : MonoBehaviour
         }
     }
 
-    void CreateGrid()
+    public void CreateGrid()
     {
         grid = new Node[gridSizeX, gridSizeY];
         Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.forward * gridWorldSize.y / 2;
@@ -92,7 +99,11 @@ public class GridMaker : MonoBehaviour
                     Gizmos.color = (n.walkable) ? Color.white : Color.red; //If true, set to white, else set to red gizmo color.
                    
                     Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - .1f));
-                }
+                    
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
+
             }
+        }
         }
     }

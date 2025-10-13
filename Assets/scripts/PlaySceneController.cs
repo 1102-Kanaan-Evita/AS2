@@ -1,4 +1,3 @@
-// Assets/Scripts/PlaySceneController.cs
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -24,6 +23,15 @@ public class PlaySceneController : MonoBehaviour
         if (envGen != null)
             envGen.GenerateEnvironment(activePreset);
 
+        // --- NEW: bake grid after environment generated ---
+        var gridMaker = FindObjectOfType<GridMaker>();
+        if (gridMaker != null)
+        {
+            // Optionally match plane size here:
+            // gridMaker.gridWorldSize = new Vector2(40, 40);
+            gridMaker.Bake();
+        }
+
         // Spawn player
         if (playerPrefab != null && spawnPoint != null)
             Instantiate(playerPrefab, spawnPoint.position, spawnPoint.rotation);
@@ -44,6 +52,11 @@ public class PlaySceneController : MonoBehaviour
         {
             envGen.ClearEnvironment();
             envGen.GenerateEnvironment(activePreset);
+
+            // --- Re-bake the grid after regenerating obstacles ---
+            var gridMaker = FindObjectOfType<GridMaker>();
+            if (gridMaker != null)
+                gridMaker.Bake();
         }
     }
 

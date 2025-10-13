@@ -6,6 +6,12 @@ public class EnvironmentGenerator : MonoBehaviour
     public GameObject cubePrefab;
     public GameObject spherePrefab;
 
+    [Header("Ground / spawn area")]
+    public Transform groundTransform; // assign GroundPlane here
+    public Vector2 spawnAreaSize = new Vector2(40f, 40f); // X (width), Z (depth)
+    public Vector2 spawnAreaCenterOffset = Vector2.zero; // optional offset on ground
+
+
     private GameObject obstacleParent;
 
     public void GenerateEnvironment(GameState.Preset preset)
@@ -14,6 +20,8 @@ public class EnvironmentGenerator : MonoBehaviour
             Destroy(obstacleParent);
 
         obstacleParent = new GameObject("Obstacles");
+        obstacleParent.transform.parent = this.transform;
+
 
         int obstacleCount = 20;
         bool circular = false;
@@ -39,12 +47,32 @@ public class EnvironmentGenerator : MonoBehaviour
         for (int i = 0; i < obstacleCount; i++)
         {
             GameObject prefab = circular ? spherePrefab : cubePrefab;
-            GameObject obj = Instantiate(prefab, GetRandomPosition(), Quaternion.identity);
-            obj.transform.localScale = Vector3.one * Random.Range(1f, 3f);
-            obj.transform.parent = obstacleParent.transform;
+            Vector3 pos = GetRandomPositionOnGround();
+            GameObject obj = Instantiate(prefab, pos, Quaternion.identity, obstacleParent.transform);
+
+            // random size
+            float s = Random.Range(1f, 3f);
+            obj.transform.localScale = new Vector3(s, s, s);
+
+            // Optional: ensure the object sits on the plane exactly (if prefab pivot isn't at bottom)
+            // Raycast down to plane and set y if needed (not necessary if using ground Y)
         }
+    }
 
+    Vector3 GetRandomPositionOnGround()
+    {
+        // ground center and size
+        Vector3 basePos = groundTransform != null ? groundTransform.position : Vector3.zero;
+        float halfX = spawnAreaSize.x * 0.5f;
+        float halfZ = spawnAreaSize.y * 0.5f;
 
+        float x = Random.Range(basePos.x - halfX + spawnAreaCenterOffset.x, basePos.x + halfX + spawnAreaCenterOffset.x);
+        float z = Random.Range(basePos.z - halfZ + spawnAreaCenterOffset.y, basePos.z + halfZ + spawnAreaCenterOffset.y);
+
+        // sit slightly above ground so colliders detect (use ground Y + half obstacle height / pivot)
+        float y = (groundTransform != null) ? groundTransform.position.y + 0.5f : 0.5f;
+
+        return new Vector3(x, y, z);
     }
 
     Vector3 GetRandomPosition()
