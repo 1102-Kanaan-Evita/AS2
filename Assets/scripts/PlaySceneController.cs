@@ -19,22 +19,16 @@ public class PlaySceneController : MonoBehaviour
         if (hudPresetLabel != null)
             hudPresetLabel.text = activePreset.ToString();
 
-        // Generate environment
+        // Generate environment FIRST (this will handle zone visibility)
         if (envGen != null)
             envGen.GenerateEnvironment(activePreset);
 
-        // --- NEW: bake grid after environment generated ---
+        // --- Bake grid after environment generated ---
         var gridMaker = FindObjectOfType<GridMaker>();
         if (gridMaker != null)
         {
-            // Optionally match plane size here:
-            // gridMaker.gridWorldSize = new Vector2(40, 40);
             gridMaker.Bake();
         }
-
-        // Spawn player
-        if (playerPrefab != null && spawnPoint != null)
-            Instantiate(playerPrefab, spawnPoint.position, spawnPoint.rotation);
 
         // Hook up button
         if (completeButton != null)
@@ -50,6 +44,8 @@ public class PlaySceneController : MonoBehaviour
         // Regenerate environment when pressing "C"
         if (Input.GetKeyDown(KeyCode.C) && envGen != null)
         {
+            Debug.Log("Regenerating environment...");
+            
             envGen.ClearEnvironment();
             envGen.GenerateEnvironment(activePreset);
 

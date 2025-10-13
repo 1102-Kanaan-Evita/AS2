@@ -5,7 +5,8 @@ public enum MovementMode
 {
     AStar,
     AStarPF,
-    PotentialFieldsOnly
+    PotentialFieldsOnly,
+    RRT
 }
 
 public class RTSController : MonoBehaviour
@@ -19,9 +20,6 @@ public class RTSController : MonoBehaviour
     public MovementMode movementMode = MovementMode.AStarPF;
     public LayerMask obstacleLayer;
     public float formationSpacing = 3f;
-    
-    [Header("Pathfinding Algorithm")]
-    public bool useRRT = false; // Toggle between A* and RRT
     
     [Header("Visual")]
     public bool showFormationGizmos = true;
@@ -46,6 +44,10 @@ public class RTSController : MonoBehaviour
     
     void Start()
     {
+        // Set movement mode from GameState
+        movementMode = ConvertPathfindingMethodToMovementMode(GameState.SelectedPathfinding);
+        Debug.Log("Starting with movement mode: " + movementMode);
+        
         GameObject waypointLine = new GameObject("WaypointLine");
         waypointLineRenderer = waypointLine.AddComponent<LineRenderer>();
         waypointLineRenderer.startWidth = 0.3f;
@@ -65,6 +67,28 @@ public class RTSController : MonoBehaviour
         pathVisLineRenderer.positionCount = 0;
     }
     
+    MovementMode ConvertPathfindingMethodToMovementMode(GameState.PathfindingMethod method)
+    {
+        switch (method)
+        {
+            case GameState.PathfindingMethod.AStar:
+                return MovementMode.AStar;
+            case GameState.PathfindingMethod.PotentialFields:
+                return MovementMode.PotentialFieldsOnly;
+            case GameState.PathfindingMethod.AStarPF:
+                return MovementMode.AStarPF;
+            case GameState.PathfindingMethod.RRT:
+                return MovementMode.RRT;
+            default:
+                return MovementMode.AStarPF;
+        }
+    }
+    
+    bool UseRRTForCurrentMode()
+    {
+        return movementMode == MovementMode.RRT;
+    }
+    
     void Update()
     {
         if (pathVisualizationMode)
@@ -82,13 +106,6 @@ public class RTSController : MonoBehaviour
     
     void HandleKeyCommands()
     {
-        // Toggle RRT pathfinding - works in both modes
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            useRRT = !useRRT;
-            Debug.Log("Pathfinding Algorithm: " + (useRRT ? "RRT" : "A*"));
-        }
-        
         if (Input.GetKeyDown(KeyCode.V))
         {
             pathVisualizationMode = !pathVisualizationMode;
@@ -129,9 +146,14 @@ public class RTSController : MonoBehaviour
                 movementMode = MovementMode.PotentialFieldsOnly;
                 Debug.Log("Movement Mode: Potential Fields Only");
             }
+            if (Input.GetKeyDown(KeyCode.Alpha4))
+            {
+                movementMode = MovementMode.RRT;
+                Debug.Log("Movement Mode: RRT Pathfinding");
+            }
         }
         
-        if (Input.GetKeyDown(KeyCode.C))
+        if (Input.GetKeyDown(KeyCode.X))
         {
             if (pathVisualizationMode)
             {
@@ -217,7 +239,7 @@ public class RTSController : MonoBehaviour
                     pathVisEnd = hit.point;
                     Debug.Log("Path end set at: " + hit.point);
                     
-                    // Pass useRRT flag to path request
+                    bool useRRT = UseRRTForCurrentMode();
                     PathRequestManager.RequestPath(pathVisStart.Value, pathVisEnd.Value, OnPathVisualizationComplete, useRRT);
                 }
             }
@@ -254,7 +276,7 @@ public class RTSController : MonoBehaviour
             
             Debug.Log("Path found with " + path.Length + " waypoints");
             Debug.Log("Total distance: " + pathLength.ToString("F2") + " units");
-            Debug.Log("Algorithm used: " + (useRRT ? "RRT" : "A*"));
+            Debug.Log("Algorithm used: " + (UseRRTForCurrentMode() ? "RRT" : "A*"));
             
             pathVisStart = null;
             pathVisEnd = null;
@@ -317,6 +339,7 @@ public class RTSController : MonoBehaviour
         
         if (Input.GetKeyDown(KeyCode.Return) && waypointChain.Count > 0 && selectedUnits.Count > 0)
         {
+            bool useRRT = UseRRTForCurrentMode();
             foreach (EntityUnit unit in selectedUnits)
             {
                 unit.SetWaypointChain(new List<Vector3>(waypointChain), movementMode, useRRT);
@@ -328,6 +351,8 @@ public class RTSController : MonoBehaviour
     
     void IssueMovementCommand(Vector3 destination, bool queueCommand, EntityUnit followTarget)
     {
+        bool useRRT = UseRRTForCurrentMode();
+        
         if (selectedUnits.Count == 1)
         {
             if (followTarget != null)
@@ -465,16 +490,15 @@ public class RTSController : MonoBehaviour
         if (pathVisualizationMode)
         {
             GUI.Label(new Rect(10, 10, 500, 30), "PATH VISUALIZATION MODE");
-            GUI.Label(new Rect(10, 30, 500, 30), "Algorithm: " + (useRRT ? "RRT" : "A*"));
+            GUI.Label(new Rect(10, 30, 500, 30), "Algorithm: " + (UseRRTForCurrentMode() ? "RRT" : "A*"));
             GUI.Label(new Rect(10, 50, 500, 30), "Left Click: Set start point, then end point");
             GUI.Label(new Rect(10, 70, 500, 30), "Right Click: Clear and reset");
             GUI.Label(new Rect(10, 90, 500, 30), "Press V: Exit visualization mode");
-            GUI.Label(new Rect(10, 110, 500, 30), "Press R: Toggle RRT/A*");
-            GUI.Label(new Rect(10, 130, 500, 30), "Press C: Clear current path");
+            GUI.Label(new Rect(10, 110, 500, 30), "Press C: Clear current path");
             
             if (pathVisStart.HasValue)
             {
-                GUI.Label(new Rect(10, 160, 500, 30), "Start point set - click to set end point");
+                GUI.Label(new Rect(10, 140, 500, 30), "Start point set - click to set end point");
             }
             
             if (visualizedPath != null && visualizedPath.Length > 0)
@@ -488,7 +512,7 @@ public class RTSController : MonoBehaviour
                     }
                 }
                 
-                GUI.Label(new Rect(10, 180, 500, 30), "Path: " + visualizedPath.Length + " waypoints, " + 
+                GUI.Label(new Rect(10, 160, 500, 30), "Path: " + visualizedPath.Length + " waypoints, " + 
                          displayLength.ToString("F2") + " units");
             }
         }
@@ -506,12 +530,14 @@ public class RTSController : MonoBehaviour
                 case MovementMode.PotentialFieldsOnly:
                     modeText = "Potential Fields Only";
                     break;
+                case MovementMode.RRT:
+                    modeText = "RRT Pathfinding";
+                    break;
             }
-            GUI.Label(new Rect(10, 10, 400, 30), "Movement Mode: " + modeText);
-            GUI.Label(new Rect(10, 30, 400, 30), "Pathfinding: " + (useRRT ? "RRT" : "A*"));
-            GUI.Label(new Rect(10, 50, 400, 30), "Press 1: A* | 2: A*+PF | 3: PF Only | R: Toggle RRT | V: Path Viz");
-            GUI.Label(new Rect(10, 70, 400, 30), "RClick entity to follow | Ctrl+RClick to intercept");
-            GUI.Label(new Rect(10, 90, 400, 30), "Selected Units: " + selectedUnits.Count);
+            GUI.Label(new Rect(10, 10, 500, 30), "Movement Mode: " + modeText);
+            GUI.Label(new Rect(10, 30, 500, 30), "Press 1: A* | 2: A*+PF | 3: PF Only | 4: RRT | V: Path Viz");
+            GUI.Label(new Rect(10, 50, 500, 30), "RClick entity to follow | Ctrl+RClick to intercept");
+            GUI.Label(new Rect(10, 70, 500, 30), "Selected Units: " + selectedUnits.Count);
         }
     }
     

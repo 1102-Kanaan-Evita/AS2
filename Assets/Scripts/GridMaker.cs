@@ -8,6 +8,7 @@ public class GridMaker : MonoBehaviour
     public LayerMask unwalkable;
     public Vector2 gridWorldSize;
     public float nodeRadius;
+    public float obstacleCheckMultiplier = 1.0f;
     Node[,] grid;
 
     float nodeDiameter;
@@ -43,9 +44,10 @@ public class GridMaker : MonoBehaviour
         for (int x = 0; x < gridSizeX; x ++)  {
             for (int y = 0; y < gridSizeY; y++)
             {
-                Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius); //finds points nodes will occupy.
-                bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, unwalkable)); //checksphere returns true if collision detected. Passing unwalkable mask to the function at the end there.
-                grid[x, y] = new Node(walkable, worldPoint, x, y); //populates array
+                Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius);
+                float checkRadius = nodeRadius * obstacleCheckMultiplier; // Modified line
+                bool walkable = !(Physics.CheckSphere(worldPoint, checkRadius, unwalkable)); // Modified line
+                grid[x, y] = new Node(walkable, worldPoint, x, y);
             }
         }
     }

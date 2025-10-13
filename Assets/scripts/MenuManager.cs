@@ -9,6 +9,8 @@ public class MenuManager : MonoBehaviour
     public Transform boardParent;
     public GameObject jeopardyButtonPrefab;
     public Toggle showLabelsToggle;
+    public InputField unitCountInput; // Add this to inspector
+    public Dropdown pathfindingDropdown; // Add this to inspector
     public AudioClip jeopardyMusic;
     public AudioClip deathSfx;
     public AudioClip winSfx;
@@ -61,6 +63,30 @@ public class MenuManager : MonoBehaviour
             showLabelsToggle.onValueChanged.RemoveAllListeners();
             showLabelsToggle.onValueChanged.AddListener(OnShowLabelsChanged);
             showAllLabels = showLabelsToggle.isOn;
+        }
+        
+        // Setup unit count input field
+        if (unitCountInput != null)
+        {
+            unitCountInput.text = GameState.UnitCount.ToString();
+            unitCountInput.onEndEdit.AddListener(OnUnitCountChanged);
+        }
+        
+        // Setup pathfinding dropdown
+        if (pathfindingDropdown != null)
+        {
+            pathfindingDropdown.ClearOptions();
+            pathfindingDropdown.AddOptions(new System.Collections.Generic.List<string> 
+            { 
+                "A* Pathfinding", 
+                "Potential Fields Only", 
+                "A* + Potential Fields",
+                "RRT Pathfinding" 
+            });
+            // Set to current saved value
+            pathfindingDropdown.value = (int)GameState.SelectedPathfinding;
+            pathfindingDropdown.RefreshShownValue(); // Ensure display updates
+            pathfindingDropdown.onValueChanged.AddListener(OnPathfindingChanged);
         }
 
         RefreshButtons();
@@ -175,5 +201,29 @@ public class MenuManager : MonoBehaviour
         showAllLabels = show;
         foreach (var jb in _buttons)
             jb.UpdateDisplay(showAllLabels);
+    }
+    
+    public void OnUnitCountChanged(string value)
+    {
+        if (int.TryParse(value, out int count))
+        {
+            // Clamp to reasonable values
+            count = Mathf.Clamp(count, 0, 100);
+            GameState.UnitCount = count;
+            unitCountInput.text = count.ToString(); // Update display with clamped value
+            Debug.Log("Unit count set to: " + count);
+        }
+        else
+        {
+            // Invalid input, reset to current value
+            unitCountInput.text = GameState.UnitCount.ToString();
+            Debug.LogWarning("Invalid unit count input");
+        }
+    }
+    
+    public void OnPathfindingChanged(int index)
+    {
+        GameState.SelectedPathfinding = (GameState.PathfindingMethod)index;
+        Debug.Log("Pathfinding method set to: " + GameState.SelectedPathfinding);
     }
 }

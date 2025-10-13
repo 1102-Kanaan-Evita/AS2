@@ -14,9 +14,23 @@ public static class GameState
         AStarShowcase,
         Office
     }
+    
+    public enum PathfindingMethod
+    {
+        AStar,              // A* only (simple path following)
+        PotentialFields,    // Potential Fields only
+        AStarPF,           // A* with Potential Fields
+        RRT                // RRT pathfinding
+    }
 
     // selected preset for the next PlayScene
     public static Preset SelectedPreset = Preset.RandomCircles20;
+    
+    // number of units to spawn
+    public static int UnitCount = 1;
+    
+    // selected pathfinding method
+    public static PathfindingMethod SelectedPathfinding = PathfindingMethod.AStarPF;
 
     // set of presets that have been completed
     private static HashSet<Preset> _completed = new HashSet<Preset>();
